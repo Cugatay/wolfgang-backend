@@ -1,21 +1,33 @@
-import { Schema, model, ObjectId } from 'mongoose';
+import { Schema, model } from 'mongoose';
 
-type Roles = 'villager' | 'seer' | 'doctor' | 'vampire';
-
+// type Roles = 'villager' | 'seer' | 'doctor' | 'vampire';
+type GameTimes = 'day' | 'vote' | 'night';
 interface Player {
-    user_id: ObjectId;
-    winner: null | Roles;
-    role: Roles;
+    username: string;
+    role: string | null;
+    votes: string[];
+    isAlive: boolean;
+    isProtected: boolean;
 }
 
 export interface IGame {
     players: Player[];
-    winner: null | string;
+    winner: null | 'villagers' | 'vampires';
+    time: null | GameTimes;
+    shownRole: string | null;
 }
 
 const schema = new Schema<IGame>({
-  players: [{ user_id: String, winner: String }],
+  players: [{
+    username: String,
+    role: String,
+    votes: [String],
+    isAlive: Boolean,
+    isProtected: Boolean,
+  }],
   winner: String,
+  time: String,
+  shownRole: String,
 });
 
 const GameModel = model<IGame>('Game', schema);
