@@ -1,0 +1,8 @@
+version: "3.4"
+services: 
+  vamposter-backend:
+    container_name: vamposter-backend
+    build: .
+    restart: unless-stopped
+    ports:
+      - 4000:4000
