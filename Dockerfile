@@ -1,10 +1,8 @@
-FROM node:current-alpine
+FROM node:current
 WORKDIR /opt/app
 COPY . .
-RUN apk --no-cache add --virtual native-deps \
-  g++ gcc libgcc libstdc++ linux-headers make python && \
-  npm install --quiet node-gyp -g &&\
-  npm install --quiet && \
-  apk del native-deps
+RUN yarn
+RUN yarn build
 EXPOSE 4000
+ENV NODE_ENV=production
 CMD ["node", "out/index.js"]
