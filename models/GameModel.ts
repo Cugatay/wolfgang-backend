@@ -1,7 +1,7 @@
 import { Schema, model } from 'mongoose';
 
 // type Roles = 'villager' | 'seer' | 'doctor' | 'vampire';
-type GameTimes = 'day' | 'vote' | 'night';
+type GameTimes = 'day' | 'vote' | 'night' | 'roleSelect';
 interface Player {
     username: string;
     role: string | null;
@@ -28,7 +28,7 @@ const schema = new Schema<IGame>({
   winner: String,
   time: String,
   shownRole: String,
-});
+}, { timestamps: true });
 
 const GameModel = model<IGame>('Game', schema);
 

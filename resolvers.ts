@@ -15,6 +15,15 @@ interface ActionProps {
 
 const resolvers = {
   Query: {
+    // Users can vote itselves
+    mainScreen: async (_: null, { token }: IUser) => {
+      const user = await verifyUser(token);
+      if (!user) throw new Error('Please Sign In');
+
+      console.log(user.username);
+
+      return user;
+    },
     myRole: async (_: null, { token }: IUser, { GameModel }: IContext) => {
       const user = await verifyUser(token);
 
@@ -44,11 +53,44 @@ const resolvers = {
     },
   },
   Mutation: {
-    // deneme: (_: null, __: null, { pubsub: pubb }: IContext) => {
-    //   pubb.publish('GAME_UPDATED',
-    // { game_id: '12345', gameUpdated: ['Cagatay', 'ali', 'falan'] });
-    //   return 'success';
-    // },
+    joinGame: async (_: null, { token }: IUser, { GameModel }: IContext) => {
+      const user = await verifyUser(token);
+
+      let game = await GameModel.findOne({ 'players.8': { $exists: false } });
+
+      if (!game) {
+        const newGame = new GameModel({});
+
+        game = newGame;
+      }
+
+      const alreadyInGame = await GameModel.findOne({
+        // players: [{ username: user.username, isAlive: true }],
+        players: { $elemMatch: { username: user.username, isAlive: true } },
+        // 'players.isAlive': true,
+        winner: null,
+      });
+
+      if (alreadyInGame) throw new Error('You are already in a game');
+
+      game.players.push({
+        username: user.username,
+        role: null,
+        votes: [],
+        isAlive: true,
+        isProtected: false,
+      });
+
+      await game.save();
+
+      if (game.players.length === 9) {
+        startGame(game!);
+      }
+
+      pubsub.publish('GAME_UPDATED', { gameUpdated: game });
+
+      return game;
+    },
     register: async (_: null, { username, password, email }: IUser, { UserModel }: IContext) => {
       const existUser = await UserModel.findOne({ username });
 
@@ -89,47 +131,7 @@ const resolvers = {
 
       return 'success';
     },
-    joinGame: async (_: null, { token }: IUser, { GameModel }: IContext) => {
-      const user = await verifyUser(token);
-
-      let game = await GameModel.findOne({ 'players.8': { $exists: false } });
-
-      if (!game) {
-        const newGame = new GameModel({});
-
-        game = newGame;
-      }
-
-      const alreadyInGame = await GameModel.findOne({
-        // players: [{ username: user.username, isAlive: true }],
-        players: { $elemMatch: { username: user.username, isAlive: true } },
-        // 'players.isAlive': true,
-        winner: null,
-      });
-
-      if (alreadyInGame) throw new Error('You are already in a game');
-
-      game.players.push({
-        username: user.username,
-        role: null,
-        votes: [],
-        isAlive: true,
-        isProtected: false,
-      });
-
-      await game.save();
-
-      pubsub.publish('GAME_UPDATED', { gameUpdated: game });
-
-      if (game.players.length === 9) {
-        startGame(game!);
-      }
-
-      return game;
-    },
-    // Users can vote itselves
-
-    voteToKill: async (_: null,
+    vote: async (_: null,
       { token, targetUsername }: ActionProps, { GameModel }: IContext) => {
       const user = await verifyUser(token);
 
@@ -137,21 +139,15 @@ const resolvers = {
         players: { $elemMatch: { username: user.username, isAlive: true } },
         winner: null,
       });
-
       if (!game) throw new Error('You are not in a game');
 
-      if (game.time !== 'night') throw new Error("You can't to this right now");
-
       const player = game.players.find((pl) => pl.username === user.username);
-
-      if (player?.role !== 'vampire') throw new Error('You are not a Vampire');
-      if (!player.isAlive) throw new Error('You are dead');
-
       const targetUser = game.players.find((pl) => pl.username === targetUsername);
 
+      if (!player?.isAlive) throw new Error('You are dead');
       if (!targetUser) throw new Error('This user is not in this game');
-
       if (!targetUser.isAlive) throw new Error('This user is already dead');
+      if (!(game.time === 'night' && player.role === 'vampire') && game.time !== 'vote') throw new Error("You can't to this right now");
 
       const existVote = game.players.find((pl) => {
         const voteIndex = pl.votes.indexOf(user.username);
@@ -162,51 +158,60 @@ const resolvers = {
         return voteIndex !== -1;
       });
 
+      console.log('now here');
+      console.log(existVote);
       if (existVote?.username !== targetUsername) {
+        console.log('yey');
         targetUser.votes.push(user.username);
       }
+
+      pubsub.publish('PLAYER_VOTED', { playerVoted: { game_id: game._id, player_username: user.username, target_username: existVote?.username !== targetUsername ? targetUsername : null } });
 
       game.save();
       return targetUsername;
     },
-    voteToExecute: async (_: null,
-      { token, targetUsername }: ActionProps, { GameModel }: IContext) => {
-      const user = await verifyUser(token);
+    // voteToExecute: async (_: null,
+    //   { token, targetUsername }: ActionProps, { GameModel }: IContext) => {
+    //   const user = await verifyUser(token);
 
-      const game = await GameModel.findOne({
-        players: { $elemMatch: { username: user.username, isAlive: true } },
-        winner: null,
-      });
+    //   const game = await GameModel.findOne({
+    //     players: { $elemMatch: { username: user.username, isAlive: true } },
+    //     winner: null,
+    //   });
 
-      if (!game) throw new Error('You are not in a game');
+    //   if (!game) throw new Error('You are not in a game');
 
-      if (game.time !== 'vote') throw new Error("You can't to this right now");
+    //   if (game.time !== 'vote') throw new Error("You can't to this right now");
 
-      const player = game.players.find((pl) => pl.username === user.username);
-      if (!player!.isAlive) throw new Error('You are dead');
+    //   const player = game.players.find((pl) => pl.username === user.username);
+    //   if (!player!.isAlive) throw new Error('You are dead');
 
-      const targetUser = game.players.find((pl) => pl.username === targetUsername);
+    //   const targetUser = game.players.find((pl) => pl.username === targetUsername);
 
-      if (!targetUser) throw new Error('This user is not in this game');
+    //   if (!targetUser) throw new Error('This user is not in this game');
 
-      if (!targetUser.isAlive) throw new Error('This user is already dead');
+    //   if (!targetUser.isAlive) throw new Error('This user is already dead');
 
-      const existVote = game.players.find((pl) => {
-        const voteIndex = pl.votes.indexOf(user.username);
-        if (voteIndex !== -1) {
-          pl.votes.splice(voteIndex, 1);
-        }
+    //   const existVote = game.players.find((pl) => {
+    //     const voteIndex = pl.votes.indexOf(user.username);
+    //     if (voteIndex !== -1) {
+    //       pl.votes.splice(voteIndex, 1);
+    //     }
 
-        return voteIndex !== -1;
-      });
+    //     return voteIndex !== -1;
+    //   });
 
-      if (existVote?.username !== targetUsername) {
-        targetUser.votes.push(user.username);
-      }
+    //   if (existVote?.username !== targetUsername) {
+    //     targetUser.votes.push(user.username);
+    //   }
 
-      game.save();
-      return targetUsername;
-    },
+    //   pubsub.publish('PLAYER_VOTED_TO_EXECUTE', { playerVotedToExecute: { game_id:
+    //  game._id, player_username: user.username, target_usern
+    // ame: existVote?.username !== targetUsername ? targetUsername : null } });
+
+    //   game.save();
+    //   return targetUsername;
+    // },
     protectUser: async (_: null,
       { token, targetUsername }: ActionProps, { GameModel }: IContext) => {
       const user = await verifyUser(token);
@@ -276,6 +281,39 @@ const resolvers = {
         role: targetUser.role,
       };
     },
+    sendMessage: async (_: null,
+      { token, message: pMessage }: {token: string, message: string}, { GameModel }: IContext) => {
+      const user = await verifyUser(token);
+
+      const game = await GameModel.findOne({
+        players: { $elemMatch: { username: user.username, isAlive: true } },
+        winner: null,
+      });
+
+      if (!game) throw new Error('You are not in a game');
+
+      const player = game.players.find((pl) => pl.username === user.username);
+      if (!player!.isAlive) throw new Error('You are dead');
+
+      const message = pMessage.trim();
+
+      const chat = game.time === 'day' || game.time === 'vote' ? 'village' : game.time === 'night' && player?.role === 'vampire' ? 'vampire' : null;
+
+      if (chat) {
+        pubsub.publish('PLAYER_SENT_MESSAGE', {
+          game_id: game._id,
+          playerSentMessage: {
+            username: user.username,
+            message,
+            chat,
+          },
+        });
+      } else {
+        throw new Error("You can't send message now");
+      }
+
+      return 'success';
+    },
   },
   Subscription: {
     gameUpdated: {
@@ -283,17 +321,91 @@ const resolvers = {
         const user = await verifyUser(variables.token);
 
         const game = await SubGameModel.findOne({
+          players: { $elemMatch: { username: user.username /* , isAlive: true */ } },
+          // winner: null,
+        }, {}, { sort: { createdAt: -1 } });
+
+        return payload.gameUpdated._id.toString() === game?._id.toString();
+      }),
+    },
+    playerVoted: {
+      subscribe: withFilter(() => pubsub.asyncIterator('PLAYER_VOTED'), async (payload, variables) => {
+        const user = await verifyUser(variables.token);
+
+        const game = await SubGameModel.findOne({
           players: { $elemMatch: { username: user.username, isAlive: true } },
           winner: null,
         });
-        console.log(payload.gameUpdated);
-        console.log(variables.token);
-        console.log(game);
 
-        return payload.gameUpdated._id.toString() === game?._id.toString();
-        // return !!game;
+        const vampire = game?.players.find((pl) => pl.username === user.username && pl.role === 'vampire');
+
+        if (game?.time === 'vote') {
+          return payload.playerVoted.game_id.toString() === game?._id.toString();
+          // && payload.playerVoted.player_username !== user.username;
+        }
+
+        return payload.playerVoted.game_id.toString() === game?._id.toString()
+        // && payload.playerVoted.player_username !== user.username
+        && vampire !== undefined;
       }),
     },
+    // playerVotedToKill: {
+    //   subscribe: withFilter(() => pubsub.a
+    // syncIterator('PLAYER_VOTED_TO_KILL'), async (payload, variables) => {
+    //     const user = await verifyUser(variables.token);
+
+    //     const game = await SubGameModel.findOne({
+    //       players: { $elemMatch: { username: user.username, isAlive: true } },
+    //       winner: null,
+    //     });
+
+    //     const player = game?.players.fin
+    // d((pl) => pl.username === user.username && pl.role === 'vampire');
+
+    //     return !!player && payload.playerVotedToKill.game_id.toString() === game?._id.toString()
+    //     && payload.playerVotedToKill.player_username !== user.username;
+    //   }),
+    // },
+    playerSentMessage: {
+      subscribe: withFilter(() => pubsub.asyncIterator('PLAYER_SENT_MESSAGE'), async (payload, variables) => {
+        const user = await verifyUser(variables.token);
+
+        const game = await SubGameModel.findOne({
+          players: { $elemMatch: { username: user.username /* isAlive: true */ } },
+          winner: null,
+        }, {}, { sort: { createdAt: -1 } });
+
+        const player = game?.players.find((pl) => pl.username === user.username && pl.role === 'vampire');
+
+        if (payload.playerSentMessage.chat === 'village') {
+          return payload.game_id.toString() === game?._id.toString()
+          && payload.playerSentMessage.username !== user.username;
+        }
+
+        console.log(player);
+        return payload.game_id.toString() === game?._id.toString()
+          && payload.playerSentMessage.username !== user.username
+        && player?.role === 'vampire';
+      }),
+    },
+    // playerSentVampireMessage: {
+    //   subscribe: withFilter(() => pubsub.asyncIterator
+    // ('PLAYER_SENT_VAMPIRE_MESSAGE'), async (payload, variables) => {
+    //     const user = await verifyUser(variables.token);
+
+    //     const game = await SubGameModel.findOne({
+    //       players: { $elemMatch: { username: user.username, isAlive: true } },
+    //       winner: null,
+    //     });
+
+    //     const player = game?.players.find((pl) => pl.us
+    // ername === user.username && pl.role === 'vampire');
+
+    //     return payload.game_id.toString() === game?._id.toString()
+    //     && payload.playerSentVampireMessage.username !== user.username
+    //     && player?.role === 'vampire';
+    //   }),
+    // },
   },
 };
 

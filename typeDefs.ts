@@ -18,33 +18,51 @@ const typeDefs = gql`
     otherVampire: String
   }
 
+  type MainScreenRes {
+    winCount: Int!
+    avatar: Int!
+    username: String!
+  }
+
   type ShownRoleRes {
     username: String!
     role: String!
   }
 
+  type PlayerExecuteRes {
+    player_username: String!
+    target_username: String
+  }
+
+  type Message {
+    username: String!
+    message: String!
+    chat: String!
+  }
+
   type Query {
     myRole(token: String!): RoleRes! 
+    mainScreen(token: String!): MainScreenRes!
   }
 
   type Mutation {
-    deneme: String
+    joinGame(token: String!): Game!
     register(username: String!, password: String!, email: String!): String!
     login(username: String!, password: String!): String!
     changeAvatar(token: String!, avatar: Int!): String!
-    joinGame(token: String!): Game!
-    voteToKill(token: String!, targetUsername: String!): String!
-    voteToExecute(token: String!, targetUsername: String!): String!
+    vote(token: String!, targetUsername: String!): String!
+    # voteToExecute(token: String!, targetUsername: String!): String!
     protectUser(token: String!, targetUsername: String!): String!
     showRole(token: String!, targetUsername: String!): ShownRoleRes!
+    sendMessage(token: String!, message: String!): String!
   }
 
   type Subscription {
     gameUpdated(token: String!): Game!
-    # playerJoined: Player!
-    # playerDied: Player!
-    # gameStarted: Game!
-    # gameFinished: Game!
+    playerVoted(token: String!): PlayerExecuteRes!
+    # playerVotedToKill(token: String!): PlayerExecuteRes!
+    playerSentMessage(token: String!): Message!
+    # playerSentVampireMessage(token: String!): Message!
   }
 `;
 

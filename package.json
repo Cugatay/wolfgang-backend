@@ -5,7 +5,9 @@
   "license": "MIT",
   "scripts": {
     "watch": "tsc -w",
-    "dev": "nodemon index.ts"
+    "dev": "nodemon index.ts",
+    "build": "tsc",
+    "start": "yarn build && node out/index.js"
   },
   "devDependencies": {
     "@types/node": "^16.3.2",
@@ -22,6 +24,7 @@
     "@graphql-tools/schema": "^7.1.5",
     "@types/bcrypt": "^5.0.0",
     "@types/jsonwebtoken": "^8.5.4",
+    "@types/ws": "^7.4.7",
     "apollo-server": "^3.0.0",
     "apollo-server-core": "^3.0.0",
     "apollo-server-express": "^3.0.1",

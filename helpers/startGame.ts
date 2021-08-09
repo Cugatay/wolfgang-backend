@@ -3,42 +3,50 @@
 /* eslint-disable no-param-reassign */
 import { Document } from 'mongoose';
 import GameModel, { IGame } from '../models/GameModel';
+import { pubsub } from '..';
 
 // const DAY_SECONDS = 60;
 // const VOTE_SECONDS = 15;
 // const NIGHT_SECONDS = 30;
 
-const DAY_SECONDS = 5;
-const VOTE_SECONDS = 5;
-const NIGHT_SECONDS = 5;
-const WAIT_SECONDS = 5;
+const DAY_SECONDS = 15;
+const VOTE_SECONDS = 15;
+const NIGHT_SECONDS = 15;
+
+const WAIT_SECONDS = 10;
 
 const startGame = (game: IGame & Document<any, any, IGame>) => {
-  const { players } = game;
-
-  const roles = ['seer', 'doctor', 'vampire', 'vampire', 'villager', 'villager', 'villager', 'villager', 'villager'];
-
-  const shuffleArray = <T>(array: Array<T>) => {
-    for (let i = array.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      const temp = array[i];
-      array[i] = array[j];
-      array[j] = temp;
-    }
-  };
-
-  shuffleArray(roles);
-
-  for (let i = 0; players[i] !== undefined; i++) {
-    const player = players[i];
-    player.role = roles[i];
-  }
-
-  game.save();
+  // const { players } = game;
 
   const getUpdatedGame = async () => {
     const updatedGame = await GameModel.findById(game._id);
     return updatedGame;
+  };
+
+  const beginning = async () => {
+    const roles = ['seer', 'doctor', 'vampire', 'vampire', 'villager', 'villager', 'villager', 'villager', 'villager'];
+    const updatedGame = await getUpdatedGame();
+
+    const shuffleArray = <T>(array: Array<T>) => {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const temp = array[i];
+        array[i] = array[j];
+        array[j] = temp;
+      }
+    };
+
+    shuffleArray(roles);
+
+    for (let i = 0; updatedGame!.players[i] !== undefined; i++) {
+      const player = updatedGame!.players[i];
+      player.role = roles[i];
+    }
+
+    updatedGame!.time = 'roleSelect';
+
+    updatedGame!.save();
+    pubsub.publish('GAME_UPDATED', { gameUpdated: updatedGame });
   };
 
   // Day -> 1 min
@@ -68,6 +76,7 @@ const startGame = (game: IGame & Document<any, any, IGame>) => {
     console.log('00000000000000');
     console.log('villagers');
     console.log(villagers);
+
     if (vampires.length === 0) {
       console.log('Vampirler ölmüş la');
       pGame.winner = 'villagers';
@@ -77,6 +86,7 @@ const startGame = (game: IGame & Document<any, any, IGame>) => {
     }
 
     if (pGame.winner) {
+      pubsub.publish('GAME_UPDATED', { gameUpdated: pGame });
       console.log('Game has finished');
       pGame.save();
       clearInterval(dayLoop);
@@ -124,6 +134,7 @@ const startGame = (game: IGame & Document<any, any, IGame>) => {
     if (isGameFinished) return;
 
     updatedGame!.save();
+    pubsub.publish('GAME_UPDATED', { gameUpdated: updatedGame });
   };
 
   const voteFunc = async () => {
@@ -136,6 +147,7 @@ const startGame = (game: IGame & Document<any, any, IGame>) => {
     updatedGame!.save();
 
     console.log('vote time');
+    pubsub.publish('GAME_UPDATED', { gameUpdated: updatedGame });
   };
 
   const nightFunc = async () => {
@@ -175,6 +187,7 @@ const startGame = (game: IGame & Document<any, any, IGame>) => {
     if (isGameFinished) return;
 
     updatedGame!.save();
+    pubsub.publish('GAME_UPDATED', { gameUpdated: updatedGame });
   };
 
   const dayLoopFunction = async () => {
@@ -194,10 +207,18 @@ const startGame = (game: IGame & Document<any, any, IGame>) => {
   // eslint-disable-next-line no-undef
   let dayLoop: NodeJS.Timeout;
 
-  setTimeout(() => {
-    dayLoop = setInterval(dayLoopFunction, (DAY_SECONDS + VOTE_SECONDS + NIGHT_SECONDS) * 1000);
-    dayLoopFunction();
-  }, WAIT_SECONDS * 1000);
+  setTimeout(async () => {
+    const updatedGame = await getUpdatedGame();
+
+    if (updatedGame?.players.length === 9) {
+      await beginning();
+
+      setTimeout(() => {
+        dayLoop = setInterval(dayLoopFunction, (DAY_SECONDS + VOTE_SECONDS + NIGHT_SECONDS) * 1000);
+        dayLoopFunction();
+      }, 7 * 1000);
+    }
+  }, (WAIT_SECONDS - 7) * 1000);
 };
 
 export default startGame;
