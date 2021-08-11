@@ -5,13 +5,13 @@ import { Document } from 'mongoose';
 import GameModel, { IGame } from '../models/GameModel';
 import { pubsub } from '..';
 
-// const DAY_SECONDS = 60;
-// const VOTE_SECONDS = 15;
-// const NIGHT_SECONDS = 30;
-
-const DAY_SECONDS = 15;
+const DAY_SECONDS = 60;
 const VOTE_SECONDS = 15;
-const NIGHT_SECONDS = 15;
+const NIGHT_SECONDS = 30;
+
+// const DAY_SECONDS = 15;
+// const VOTE_SECONDS = 15;
+// const NIGHT_SECONDS = 15;
 
 const WAIT_SECONDS = 10;
 
