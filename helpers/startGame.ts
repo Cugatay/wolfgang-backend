@@ -5,7 +5,8 @@ import { Document } from 'mongoose';
 import GameModel, { IGame } from '../models/GameModel';
 import { pubsub } from '..';
 
-const DAY_SECONDS = 60;
+// const DAY_SECONDS = 60;
+const DAY_SECONDS = 45;
 const VOTE_SECONDS = 15;
 const NIGHT_SECONDS = 30;
 
