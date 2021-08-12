@@ -83,7 +83,7 @@ const resolvers = {
 
       await game.save();
 
-      if (game.players.length === 5) {
+      if (game.players.length === 9) {
         startGame(game!);
       }
 
