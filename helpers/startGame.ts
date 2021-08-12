@@ -25,7 +25,7 @@ const startGame = (game: IGame & Document<any, any, IGame>) => {
   };
 
   const beginning = async () => {
-    const roles = ['seer', 'doctor', 'vampire', 'vampire', 'villager'];
+    const roles = ['seer', 'doctor', 'vampire', 'villager', 'villager'];
     const updatedGame = await getUpdatedGame();
 
     const shuffleArray = <T>(array: Array<T>) => {
