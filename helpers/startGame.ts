@@ -211,7 +211,7 @@ const startGame = (game: IGame & Document<any, any, IGame>) => {
   setTimeout(async () => {
     const updatedGame = await getUpdatedGame();
 
-    if (updatedGame?.players.length === 9) {
+    if (updatedGame?.players.length === 5) {
       await beginning();
 
       setTimeout(() => {
