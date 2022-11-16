@@ -56,7 +56,7 @@ const resolvers = {
     joinGame: async (_: null, { token }: IUser, { GameModel }: IContext) => {
       const user = await verifyUser(token);
 
-      let game = await GameModel.findOne({ 'players.8': { $exists: false } });
+      let game = await GameModel.findOne({ 'players.8': { $exists: false }, winner: null });
 
       if (!game) {
         const newGame = new GameModel({});
@@ -79,6 +79,7 @@ const resolvers = {
         votes: [],
         isAlive: true,
         isProtected: false,
+        avatar: user.avatar,
       });
 
       await game.save();
@@ -93,6 +94,9 @@ const resolvers = {
     },
     register: async (_: null, { username, password, email }: IUser, { UserModel }: IContext) => {
       const existUser = await UserModel.findOne({ username });
+      // if(!username.trim() ||) {
+
+      // }
 
       if (existUser) throw new Error('Username is in use');
 
@@ -102,7 +106,7 @@ const resolvers = {
         username,
         password: passwordHash,
         email,
-        avatar: 0,
+        avatar: 1,
         winCount: 0,
       });
 

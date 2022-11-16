@@ -25,7 +25,7 @@ const startGame = (game: IGame & Document<any, any, IGame>) => {
   };
 
   const beginning = async () => {
-    const roles = ['seer', 'doctor', 'vampire', 'vampire', 'villager'];
+    const roles = ['seer', 'doctor', 'vampire', 'villager', 'villager'];
     const updatedGame = await getUpdatedGame();
 
     const shuffleArray = <T>(array: Array<T>) => {
@@ -71,12 +71,6 @@ const startGame = (game: IGame & Document<any, any, IGame>) => {
         }
       }
     }
-
-    console.log('alive vampires:');
-    console.log(vampires);
-    console.log('00000000000000');
-    console.log('villagers');
-    console.log(villagers);
 
     if (vampires.length === 0) {
       console.log('Vampirler ölmüş la');

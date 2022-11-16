@@ -24,7 +24,7 @@ export interface IContext {
 export const pubsub = new PubSub();
 
 (async () => {
-  const PORT = 4000;
+  const PORT = 5000;
   const app = express();
   const httpServer = createServer(app);
 

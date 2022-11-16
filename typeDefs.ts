@@ -10,6 +10,7 @@ const typeDefs = gql`
 
   type Player {
     username: String!
+    avatar: Int!
     isAlive: Boolean
   }
 

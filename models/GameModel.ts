@@ -8,6 +8,7 @@ interface Player {
     votes: string[];
     isAlive: boolean;
     isProtected: boolean;
+    avatar: number;
 }
 
 export interface IGame {
@@ -24,6 +25,7 @@ const schema = new Schema<IGame>({
     votes: [String],
     isAlive: Boolean,
     isProtected: Boolean,
+    avatar: Number,
   }],
   winner: String,
   time: String,
